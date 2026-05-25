@@ -74,6 +74,13 @@ class AIOrchestrator(Orchestrator):
             task.result = result
             task.status = TaskStatus.DONE
             self._ingest_result(task.phase, result)
+            if task.result:
+                if task.phase == AttackPhase.DISCOVERY:
+                    self._log_event(f"✅ {task.agent_name}: Scoperti {len(task.result.get('ports', []))} porte aperte")
+                elif task.phase == AttackPhase.CVE_CHECK:
+                    self._log_event(f"✅ {task.agent_name}: Trovate {len(task.result.get('cves', []))} CVE")
+                elif task.phase == AttackPhase.AUTH_ATTACK:
+                    self._log_event(f"✅ {task.agent_name}: Ottenute {len(task.result.get('credentials', []))} credenziali")
         except Exception as exc:
             task.status = TaskStatus.FAILED
             task.error = str(exc)
