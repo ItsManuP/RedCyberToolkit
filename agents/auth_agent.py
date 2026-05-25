@@ -47,7 +47,7 @@ class AuthAgent(BaseAgent):
                     self.log(f"  [HIT] {proto}://{user}:{password}@{ip}:{port_num}")
                     if stop_on_first:
                         break
-                time.sleep(0.05)
+                time.sleep(0.5)
         self.log(f"Tentativi totali: {tested_total} | Credenziali trovate: {len(found_credentials)}")
         return {"credentials": found_credentials, "total_found": len(found_credentials),
                 "total_tested": tested_total, "services_attacked": list({c["protocol"] for c in found_credentials})}

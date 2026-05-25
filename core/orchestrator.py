@@ -92,6 +92,6 @@ class Orchestrator:
             for task in tasks_for_phase:
                 self._run_task(task)
             logger.info(f"Phase {phase.value} completed")
-            time.sleep(1)  # short pause between phases
+            time.sleep(0.5)  # short pause between phases
         logger.info("Test finished, generating report...")
         return self.state
