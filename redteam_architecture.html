@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Red Team Toolkit — Architettura Multi-Agent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    color: #e6edf3;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: #8b949e;
+    margin-bottom: 28px;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.3;
+  }
+
+  /* ── SECTION 1: INPUT ── */
+  .section-input {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+  .input-card {
+    background: #161b22;
+    border: 2px solid #5591c7;
+    border-radius: 10px;
+    padding: 14px 20px;
+    flex: 1;
+  }
+  .input-card h3 { font-size: 13px; color: #5591c7; margin-bottom: 6px; }
+  .input-card p  { font-size: 12px; color: #8b949e; line-height: 1.5; }
+  .consent-card {
+    background: #161b22;
+    border: 2px solid #e3b341;
+    border-radius: 10px;
+    padding: 14px 20px;
+    flex: 1;
+  }
+  .consent-card h3 { font-size: 13px; color: #e3b341; margin-bottom: 6px; }
+  .consent-card p  { font-size: 12px; color: #8b949e; line-height: 1.5; }
+
+  /* ── ARROW CONNECTOR ── */
+  .arrow-down {
+    text-align: center;
+    font-size: 22px;
+    color: #4f98a3;
+    margin: 8px 0;
+    line-height: 1;
+  }
+  .arrow-right { color: #4f98a3; font-size: 20px; align-self: center; flex-shrink: 0; }
+
+  /* ── SECTION 2: ORCHESTRATOR ── */
+  .orch-box {
+    background: #081a14;
+    border: 2.5px solid #01696f;
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .orch-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4f98a3;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .orch-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .orch-item {
+    background: #0b2820;
+    border: 1.5px solid #4f98a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .orch-item h4 { font-size: 12px; color: #4f98a3; margin-bottom: 5px; }
+  .orch-item p  { font-size: 11px; color: #8b949e; line-height: 1.5; }
+
+  /* ── SECTION 3: AGENTS ── */
+  .agents-wrap {
+    background: #12151a;
+    border: 2px solid #a86fdf;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+  .agent-card {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid;
+    background: #161b22;
+  }
+  .agent-header {
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .agent-header .icon { font-size: 18px; display: block; margin-bottom: 3px; }
+  .agent-header h4 { font-size: 12px; font-weight: 700; color: #fff; }
+  .agent-body {
+    padding: 10px 10px 12px;
+  }
+  .agent-body li {
+    font-size: 11px;
+    color: #8b949e;
+    list-style: none;
+    padding: 2px 0;
+    border-bottom: 1px solid #21262d;
+  }
+  .agent-body li:last-child { border: none; }
+  .agent-body li::before { content: "▸ "; color: #4f98a3; }
+
+  /* ── SECTION 4: PIPELINE ── */
+  .pipeline-wrap {
+    background: #0d1a0d;
+    border: 2px solid #6daa45;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr) ;
+    gap: 0;
+    align-items: stretch;
+    position: relative;
+  }
+  .phase-card {
+    border: 2px solid;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #161b22;
+    position: relative;
+  }
+  .phase-card + .phase-card {
+    margin-left: 28px;
+  }
+  .phase-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4f98a3;
+    font-size: 22px;
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .pipeline-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  .phase-header {
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .phase-num  { font-size: 10px; color: rgba(255,255,255,0.7); font-weight: 600; letter-spacing: 1px; }
+  .phase-title { font-size: 12px; font-weight: 700; color: #fff; margin-top: 2px; }
+  .phase-body  { padding: 12px 10px; }
+  .phase-body li {
+    font-size: 11px;
+    color: #8b949e;
+    list-style: none;
+    padding: 2.5px 0;
+    border-bottom: 1px solid #21262d;
+    font-family: 'Courier New', monospace;
+  }
+  .phase-body li:last-child { border: none; }
+  .phase-body .critical { color: #dd6974; font-weight: 600; }
+  .phase-body .success  { color: #6daa45; font-weight: 600; }
+  .phase-body .warning  { color: #fdab43; }
+  .phase-body .info     { color: #5591c7; }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-top: 4px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #8b949e;
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* COLORS */
+  .c-blue   { border-color: #5591c7; }
+  .c-orange { border-color: #fdab43; }
+  .c-red    { border-color: #dd6974; }
+  .c-purple { border-color: #a86fdf; }
+  .c-teal   { border-color: #4f98a3; }
+  .c-green  { border-color: #6daa45; }
+
+  .bg-blue   { background: #5591c7; }
+  .bg-orange { background: #fdab43; }
+  .bg-red    { background: #dd6974; }
+  .bg-purple { background: #a86fdf; }
+  .bg-teal   { background: #4f98a3; }
+  .bg-green  { background: #6daa45; }
+</style>
+</head>
+<body>
+
+<h1>RED TEAM TOOLKIT — Architettura Multi-Agent</h1>
+<p class="subtitle">Orchestrator + 6 Specialized Agents &nbsp;|&nbsp; Caso teorico di attacco su 192.168.1.100</p>
+
+<!-- ① INPUT -->
+<div class="section-label" style="color:#5591c7">① Input &amp; Autorizzazione</div>
+<div class="section-input">
+  <div class="input-card">
+    <h3>Target Input</h3>
+    <p>Operatore inserisce IP, URL o FQDN del target.<br>Esempio: <code style="color:#4f98a3">192.168.1.100</code></p>
+  </div>
+  <div class="arrow-right">→</div>
+  <div class="consent-card">
+    <h3>Verifica Consenso</h3>
+    <p>Flag di autorizzazione obbligatorio.<br><span style="color:#6daa45;font-weight:600">✅ Pentest autorizzato confermato</span></p>
+  </div>
+  <div class="arrow-right">→</div>
+  <div style="flex:2">
+    <div style="background:#161b22;border:2px solid #4f98a3;border-radius:10px;padding:14px 20px;height:100%">
+      <h3 style="font-size:13px;color:#4f98a3;margin-bottom:6px">Passa all'Orchestrator</h3>
+      <p style="font-size:12px;color:#8b949e">Target validato + consenso → sessione aperta<br>Orchestrator riceve scope e avvia i task</p>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down">↓</div>
+
+<!-- ② ORCHESTRATOR -->
+<div class="section-label" style="color:#4f98a3">② Orchestrator Agent — Session Manager</div>
+<div class="orch-box">
+  <div class="orch-title">CENTRAL ORCHESTRATOR AGENT — mantiene sessione globale e visione completa dell'attacco</div>
+  <div class="orch-grid">
+    <div class="orch-item">
+      <h4>Session &amp; State</h4>
+      <p>Mantiene lo stato globale dell'attacco, le fasi completate e i risultati parziali</p>
+    </div>
+    <div class="orch-item">
+      <h4>Task Manager</h4>
+      <p>Gestisce la coda dei task, priorità e dipendenze tra agent specializzati</p>
+    </div>
+    <div class="orch-item">
+      <h4>Agent Spawner</h4>
+      <p>Avvia, sospende e termina i worker agent in base al contesto e alla fase</p>
+    </div>
+    <div class="orch-item">
+      <h4>Report Builder</h4>
+      <p>Aggrega tutti i finding, assegna CVSS e genera il report finale esportabile</p>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down">↓ dispatcher verso i worker agents ↓</div>
+
+<!-- ③ AGENTS -->
+<div class="section-label" style="color:#a86fdf">③ Specialized Agents — Worker Modulari</div>
+<div class="agents-wrap">
+  <div class="agents-grid">
+
+    <div class="agent-card c-blue">
+      <div class="agent-header bg-blue">
+        <span class="icon">[RECON]</span>
+        <h4>RECON Agent</h4>
+      </div>
+      <ul class="agent-body">
+        <li>Nmap SYN/UDP scan</li>
+        <li>OS fingerprinting</li>
+        <li>Service banner grab</li>
+        <li>OSINT / Shodan</li>
+        <li>DNS enumeration</li>
+      </ul>
+    </div>
+
+    <div class="agent-card c-orange">
+      <div class="agent-header bg-orange">
+        <span class="icon">[AUTH]</span>
+        <h4>AUTH Agent</h4>
+      </div>
+      <ul class="agent-body">
+        <li>SSH brute-force</li>
+        <li>HTTP form attack</li>
+        <li>Credential stuffing</li>
+        <li>Default creds DB</li>
+        <li>FTP / RDP / SMB</li>
+      </ul>
+    </div>
+
+    <div class="agent-card c-red">
+      <div class="agent-header bg-red">
+        <span class="icon">[CVE]</span>
+        <h4>CVE Agent</h4>
+      </div>
+      <ul class="agent-body">
+        <li>NVD / ExploitDB</li>
+        <li>Version matching</li>
+        <li>CVSS scoring</li>
+        <li>Risk prioritization</li>
+        <li>Patch gap analysis</li>
+      </ul>
+    </div>
+
+    <div class="agent-card c-purple">
+      <div class="agent-header bg-purple">
+        <span class="icon">[EXPLOIT]</span>
+        <h4>EXPLOIT Agent</h4>
+      </div>
+      <ul class="agent-body">
+        <li>PoC execution</li>
+        <li>Payload generation</li>
+        <li>Priv escalation</li>
+        <li>Lateral movement</li>
+        <li>Shell callback</li>
+      </ul>
+    </div>
+
+    <div class="agent-card c-teal">
+      <div class="agent-header bg-teal">
+        <span class="icon">[TRAFFIC]</span>
+        <h4>TRAFFIC Agent</h4>
+      </div>
+      <ul class="agent-body">
+        <li>Packet capture</li>
+        <li>HTTP intercept</li>
+        <li>SSL inspection</li>
+        <li>Session analysis</li>
+        <li>Replay attacks</li>
+      </ul>
+    </div>
+
+    <div class="agent-card c-green">
+      <div class="agent-header bg-green">
+        <span class="icon">[REPORT]</span>
+        <h4>REPORT Agent</h4>
+      </div>
+      <ul class="agent-body">
+        <li>Finding aggregation</li>
+        <li>Evidence collection</li>
+        <li>CVSS annotation</li>
+        <li>Remediation gen.</li>
+        <li>Export PDF / JSON</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<div class="arrow-down">↓ risultati → attack pipeline ↓</div>
+
+<!-- ④ PIPELINE -->
+<div class="section-label" style="color:#6daa45">④ Attack Pipeline — Caso teorico: Target 192.168.1.100</div>
+<div class="pipeline-wrap">
+  <div class="pipeline-row">
+
+    <div class="phase-card c-blue" style="flex:1">
+      <div class="phase-header bg-blue">
+        <div class="phase-num">FASE 1</div>
+        <div class="phase-title">DISCOVERY</div>
+      </div>
+      <ul class="phase-body">
+        <li class="info">Nmap SYN scan</li>
+        <li>22/tcp — SSH</li>
+        <li>80/tcp — HTTP</li>
+        <li>443/tcp — HTTPS</li>
+        <li>3306/tcp — MySQL</li>
+        <li class="info">OS: Ubuntu 20.04</li>
+        <li class="info">Apache 2.4.49</li>
+      </ul>
+    </div>
+
+    <div class="phase-arrow" style="color:#dd6974">→</div>
+
+    <div class="phase-card c-red" style="flex:1">
+      <div class="phase-header bg-red">
+        <div class="phase-num">FASE 2</div>
+        <div class="phase-title">CVE CHECK</div>
+      </div>
+      <ul class="phase-body">
+        <li class="info">Apache 2.4.49 →</li>
+        <li class="critical">CVE-2021-41773 (9.8)</li>
+        <li class="info">MySQL 5.7.32 →</li>
+        <li class="warning">CVE-2021-2154 (7.2)</li>
+        <li class="info">OpenSSH 7.4 →</li>
+        <li>CVE-2023-38408 (6.5)</li>
+        <li class="critical">3 CVE trovate</li>
+      </ul>
+    </div>
+
+    <div class="phase-arrow" style="color:#fdab43">→</div>
+
+    <div class="phase-card c-orange" style="flex:1">
+      <div class="phase-header bg-orange">
+        <div class="phase-num">FASE 3</div>
+        <div class="phase-title">AUTH ATTACK</div>
+      </div>
+      <ul class="phase-body">
+        <li class="info">SSH brute-force →</li>
+        <li class="success">admin:admin123 OK</li>
+        <li>&nbsp;</li>
+        <li class="info">MySQL login →</li>
+        <li class="success">root no-pw OK</li>
+        <li>&nbsp;</li>
+        <li class="warning">2 accessi ottenuti</li>
+      </ul>
+    </div>
+
+    <div class="phase-arrow" style="color:#a86fdf">→</div>
+
+    <div class="phase-card c-purple" style="flex:1">
+      <div class="phase-header bg-purple">
+        <div class="phase-num">FASE 4</div>
+        <div class="phase-title">EXPLOIT</div>
+      </div>
+      <ul class="phase-body">
+        <li class="info">Path traversal →</li>
+        <li class="warning">/etc/passwd letto</li>
+        <li>&nbsp;</li>
+        <li class="info">MySQL UDF →</li>
+        <li class="critical">Root shell attiva</li>
+        <li>&nbsp;</li>
+        <li class="critical">FULL COMPROMISE</li>
+      </ul>
+    </div>
+
+    <div class="phase-arrow" style="color:#6daa45">→</div>
+
+    <div class="phase-card c-green" style="flex:1">
+      <div class="phase-header bg-green">
+        <div class="phase-num">FASE 5</div>
+        <div class="phase-title">REPORT</div>
+      </div>
+      <ul class="phase-body">
+        <li class="critical">CVSS: 9.8 CRITICAL</li>
+        <li class="critical">3 CVE critiche</li>
+        <li class="warning">2 misconfig</li>
+        <li style="color:#e6edf3">Patch Apache ASAP</li>
+        <li style="color:#e6edf3">Hardening credenziali</li>
+        <li style="color:#e6edf3">MySQL bind-address</li>
+        <li class="success">Report PDF generato</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#5591c7"></div>Recon / Discovery</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fdab43"></div>Auth / Credential</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#dd6974"></div>CVE / Vulnerability</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a86fdf"></div>Exploit / Post-exploitation</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4f98a3"></div>Traffic / Intercept</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6daa45"></div>Reporting / Output</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#01696f"></div>Orchestrator Agent</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#e3b341"></div>Consent Gate</div>
+  <div class="legend-item" style="margin-left:auto;color:#dd6974;font-weight:600">Scopo: solo ambienti autorizzati — educational &amp; pentest use only</div>
+</div>
+
+</body>
+</html>
