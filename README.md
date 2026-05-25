@@ -135,7 +135,6 @@ Each report includes:
 
 - Raw socket scanning (`--privileged`) is not supported.
 - Some exploits (e.g. path traversal with `/etc/passwd`) only make sense against Linux targets.
-- `nmap` must be installed manually and added to the PATH.
 
 **Solution**: use Docker (as described above) to get a complete Linux environment that also works on Windows.
 
