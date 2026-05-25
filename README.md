@@ -1,7 +1,7 @@
 ```markdown
 # 🔴 RedCyber ToolKIT – Multi-Agent Pentest Framework
 
-**RedCyber ToolKIT** è un framework modulare di penetration testing basato su agenti specializzati (Recon, CVE, Auth, Exploit, Traffic, Report) orchestrati da un core centralizzato.  
+**RedCyber ToolKIT** è un framework modulare di penetration test basato su agenti specializzati (Recon, CVE, Auth, Exploit, Traffic, Report) orchestrati da un core centralizzato.  
 Progettato per ambienti autorizzati, supporta sia esecuzione nativa su Linux che containerizzata con Docker (funzionante anche su Windows).
 
 
