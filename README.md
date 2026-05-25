@@ -1,80 +1,78 @@
-```markdown
 # 🔴 RedCyber ToolKIT – Multi-Agent Pentest Framework
 
-**RedCyber ToolKIT** è un framework modulare di penetration test basato su agenti specializzati (Recon, CVE, Auth, Exploit, Traffic, Report) orchestrati da un core centralizzato.  
-Progettato per ambienti autorizzati, supporta sia esecuzione nativa su Linux che containerizzata con Docker (funzionante anche su Windows).
+**RedCyber ToolKIT** is a modular penetration testing framework based on specialized agents (Recon, CVE, Auth, Exploit, Traffic, Report) orchestrated by a centralized core.  
+Designed for authorized environments, it supports both native execution on Linux and containerized execution with Docker (also working on Windows).
 
+## 🚀 Key Features
 
-## 🚀 Funzionalità principali
-
-| Fase | Agente | Descrizione |
+| Phase | Agent | Description |
 |------|--------|-------------|
-| 1. Discovery | `recon` | Port scanning (nmap o socket), OS fingerprinting, banner grabbing |
-| 2. CVE Check | `cve` | Ricerca vulnerabilità su NVD API + database offline, scoring CVSS |
-| 3. Auth Attack | `auth` | Test credenziali di default e brute-force su SSH, FTP, HTTP, MySQL, PostgreSQL, Redis |
-| 4. Exploit | `exploit` | Path traversal, LFI, command injection, RCE (es. Apache, Redis) |
-| 5. Traffic | `traffic` | Analisi header HTTP, endpoint probing, SSL check, rilevamento info leakage |
-| 6. Report | `report` | Generazione report in JSON, Markdown e TXT con remediation |
+| 1. Discovery | `recon` | Port scanning (nmap or socket), OS fingerprinting, banner grabbing |
+| 2. CVE Check | `cve` | Vulnerability lookup through the NVD API + offline database, CVSS scoring |
+| 3. Auth Attack | `auth` | Default credential testing and brute-force on SSH, FTP, HTTP, MySQL, PostgreSQL, Redis |
+| 4. Exploit | `exploit` | Path traversal, LFI, command injection, RCE (e.g. Apache, Redis) |
+| 5. Traffic | `traffic` | HTTP header analysis, endpoint probing, SSL checks, information leakage detection |
+| 6. Report | `report` | Report generation in JSON, Markdown, and TXT with remediation guidance |
 
 ---
 
-## 📦 Requisiti
+## 📦 Requirements
 
-- **Docker** (opzione consigliata) oppure **Python 3.8+** con `pip`
-- **nmap** (opzionale, ma raccomandato per discovery completa)
-- Sistema operativo: Linux (nativo) o Windows/macOS con Docker
+- **Docker** (recommended option) or **Python 3.8+** with `pip`
+- **nmap** (optional, but recommended for full discovery)
+- Operating system: Linux (native) or Windows/macOS with Docker
 
 ---
 
-## 🐳 Installazione ed esecuzione con Docker (consigliata)
+## 🐳 Installation and Execution with Docker (Recommended)
 
-### 1. Clona il repository
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/tuo-username/redteam-toolkit.git
+git clone [https://github.com/your-username/redteam-toolkit.git](https://github.com/your-username/redteam-toolkit.git)
 cd redteam-toolkit
 ```
 
-### 2. Costruisci l’immagine Docker
+### 2. Build the Docker image
 
 ```bash
 docker build -t redteam-toolkit .
 ```
 
-### 3. Esegui un test autorizzato
+### 3. Run an authorized test
 
 ```bash
 docker run --rm --privileged redteam-toolkit --target 192.168.1.100 --yes
 ```
 
-> **`--privileged`** è necessario solo per il raw packet sniffing (fase TRAFFIC). Se non ti serve, puoi ometterlo.
+> **`--privileged`** is only required for raw packet sniffing (TRAFFIC phase). If you do not need it, you can omit it.
 
-### 4. Montare la cartella dei report (opzionale)
-
+### 4. Mount the reports folder (optional)
+### Without this option, the folder is not created and we do not have any report information apart from what is shown in the shell
 ```bash
 docker run --rm --privileged -v ${PWD}/reports:/app/reports redteam-toolkit --target 192.168.1.100 --yes
 ```
 
-I report verranno salvati nella cartella `reports/` del tuo host.
+Reports will be saved in the `reports/` folder on your host.
 
 ---
 
-## 🖥️ Esecuzione nativa su Linux
+## 🖥️ Native Execution on Linux
 
-### 1. Installa le dipendenze di sistema
+### 1. Install system dependencies
 
 ```bash
 sudo apt update
 sudo apt install nmap python3 python3-pip
 ```
 
-### 2. Installa i pacchetti Python
+### 2. Install Python packages
 
 ```bash
 pip3 install -r requirements.txt
 ```
 
-### 3. Esegui
+### 3. Run
 
 ```bash
 python3 main.py --target 192.168.1.100 --yes
@@ -82,101 +80,74 @@ python3 main.py --target 192.168.1.100 --yes
 
 ---
 
-## 🎮 Opzioni della linea di comando
+## 🎮 Command-Line Options
 
-| Argomento | Descrizione | Default |
+| Argument | Description | Default |
 |-----------|-------------|---------|
-| `--target` | IP o hostname del target | **obbligatorio** |
-| `--phases` | Fasi da eseguire (`all` o lista separata da virgole: `discovery,cve,auth`) | `all` |
-| `--port-range` | Range di porte per lo scan | `1-1024` |
-| `--no-nmap` | Usa socket scan invece di nmap | `False` |
-| `--safe-mode` | Limita exploit a operazioni read‑only | `True` |
-| `--use-nvd-api` | Interroga NVD API (richiede internet) | `False` |
-| `--max-attempts` | Numero massimo di tentativi brute‑force | `100` |
-| `--yes` | Salta il promemoria di autorizzazione | `False` |
+| `--target` | Target IP or hostname | **required** |
+| `--phases` | Phases to run (`all` or a comma-separated list: `discovery,cve,auth`) | `all` |
+| `--port-range` | Port range for scanning | `1-1024` |
+| `--no-nmap` | Use socket scan instead of nmap | `False` |
+| `--safe-mode` | Restrict exploits to read-only operations | `True` |
+| `--use-nvd-api` | Query the NVD API (requires internet access) | `False` |
+| `--max-attempts` | Maximum number of brute-force attempts | `100` |
+| `--yes` | Skip the authorization reminder | `False` |
 
-### Esempi
+### Examples
 
 ```bash
-# Solo discovery + report
+# Discovery + report only
 python main.py --target 10.0.0.5 --phases discovery,report --yes
 
-# Con nmap disabilitato e range porte esteso
+# With nmap disabled and extended port range
 python main.py --target example.com --no-nmap --port-range 1-10000 --yes
 
-# Con API NVD e modalità safe disabilitata (ATTENZIONE!)
+# With NVD API and safe mode disabled (WARNING!)
 python main.py --target 192.168.1.100 --use-nvd-api --safe-mode False --yes
 ```
 
----
 
-## 📁 Struttura del progetto
+## 📄 Report Output
 
-```
-redteam_toolkit/
-├── main.py                 # Entry point CLI
-├── core/
-│   ├── base_agent.py       # Classe astratta per tutti gli agent
-│   └── orchestrator.py     # Orchestrator, SessionState, MessageBus
-├── agents/
-│   ├── recon_agent.py
-│   ├── cve_agent.py
-│   ├── auth_agent.py
-│   ├── exploit_agent.py
-│   ├── traffic_agent.py
-│   └── report_agent.py
-├── utils/
-│   └── consent.py          # Richiesta autorizzazione
-├── reports/                # Output dei report (creata automaticamente)
-├── requirements.txt
-└── Dockerfile
-```
+At the end of the pipeline, the Report Agent generates three files in the `reports/` folder:
+
+- `report_<session-id>_<timestamp>.json` – structured data
+- `report_<session-id>_<timestamp>.md` – readable Markdown format
+- `report_<session-id>_<timestamp>.txt` – plain text format
+
+Each report includes:
+- Overall risk summary (CRITICAL/HIGH/MEDIUM/LOW/NONE)
+- List of discovered CVEs with CVSS scores
+- Discovered credentials
+- Successful exploits
+- Remediation recommendations
 
 ---
 
-## 📄 Output dei report
+## ⚠️ Legal Warnings
 
-Al termine della pipeline, il Report Agent genera tre file nella cartella `reports/`:
-
-- `report_<session-id>_<timestamp>.json` – dati strutturati
-- `report_<session-id>_<timestamp>.md` – formato Markdown leggibile
-- `report_<session-id>_<timestamp>.txt` – formato testo semplice
-
-Ogni report include:
-- Riepilogo del rischio complessivo (CRITICAL/HIGH/MEDIUM/LOW/NONE)
-- Elenco CVE trovate con CVSS
-- Credenziali scoperte
-- Exploit riusciti
-- Raccomandazioni di remediation
+> **This tool may be used ONLY on systems for which explicit written authorization has been obtained.**  
+> Improper use is prohibited and may constitute a criminal offense. The author is not responsible for any abuse.
 
 ---
 
-## ⚠️ Avvertenze legali
+## ⚠️ Known Limitations on Windows Without Docker
 
-> **Questo strumento può essere utilizzato SOLO su sistemi per i quali si dispone di esplicita autorizzazione scritta.**  
-> L’uso improprio è vietato e può costituire reato. L’autore non è responsabile di eventuali abusi.
+- Raw socket scanning (`--privileged`) is not supported.
+- Some exploits (e.g. path traversal with `/etc/passwd`) only make sense against Linux targets.
+- `nmap` must be installed manually and added to the PATH.
 
----
-
-## ⚠️ Limitazioni note su Windows senza Docker
-
-- Lo scanning raw socket (`--privileged`) non è supportato.
-- Alcuni exploit (es. path traversal con `/etc/passwd`) hanno senso solo contro target Linux.
-- `nmap` deve essere installato manualmente e aggiunto al PATH.
-
-**Soluzione**: usa Docker (come descritto sopra) per ottenere un ambiente Linux completo e funzionante anche su Windows.
+**Solution**: use Docker (as described above) to get a complete Linux environment that also works on Windows.
 
 ---
 
-## 📜 Licenza
+## 📜 License
 
-Questo progetto è distribuito per scopi educativi e di testing autorizzato.  
-Non è consentito l’uso per attività illecite.
+This project is distributed for educational purposes and authorized testing.  
+Use for illegal activities is not permitted.
 
 ---
 
-## 🤝 Contributi
+## 🤝 Contributions
 
-Pull request e suggerimenti sono benvenuti. Apri una issue per discutere nuove funzionalità o bug.
-
-```
+Pull requests and suggestions are welcome. Open an issue to discuss new features or bugs.
