@@ -1,109 +1,117 @@
-#!/usr/bin/env python3
-"""
-RedTeam Toolkit — Entry Point with AI Injection (DeepSeek)
-Every task and phase is commented on by a red teaming expert.
-"""
-
-
-import sys, os, argparse
-sys.path.insert(0, os.path.dirname(__file__))
-
-
+# main.py
+import argparse
+import sys
+import logging  # moved import up for clarity
+from core.log_config import setup_logging, get_logger
+from core.orchestrator import Orchestrator
 from core.ai_orchestrator import AIOrchestrator
-from core.orchestrator import AttackPhase
-from agents.recon_agent import ReconAgent
-from agents.cve_agent import CVEAgent
-from agents.auth_agent import AuthAgent
-from agents.exploit_agent import ExploitAgent
-from agents.traffic_agent import TrafficAgent
-from agents.report_agent import ReportAgent
-from utils.consent import ask_authorization
+from core.report_generator import ReportGenerator
 
+logger = get_logger("main")
 
-BANNER = """
-╔══════════════════════════════════════════════════════╗
-    RedCyber ToolKIT — AI-Augmented Multi-Agent v1.0   
-║   FOR AUTHORIZED PENETRATION TESTING ONLY            ║                                       
-
-╚══════════════════════════════════════════════════════╝
-"""
-
-
-PHASE_MAP = {
-    "discovery": AttackPhase.DISCOVERY,
-    "cve": AttackPhase.CVE_CHECK,
-    "auth": AttackPhase.AUTH_ATTACK,
-    "exploit": AttackPhase.EXPLOIT,
-    "traffic": AttackPhase.TRAFFIC,
-    "report": AttackPhase.REPORT,
-}
-
-
-def build_ai_orchestrator(target: str, authorized: bool, opts: dict) -> AIOrchestrator:
-    orch = AIOrchestrator(target=target, authorized=authorized, options=opts)
-    orch.register_agent("recon", ReconAgent())
-    orch.register_agent("cve", CVEAgent())
-    orch.register_agent("auth", AuthAgent())
-    orch.register_agent("exploit", ExploitAgent())
-    orch.register_agent("traffic", TrafficAgent())
-    orch.register_agent("report", ReportAgent())
-
-
-    # Enqueue standard task
-    orch.enqueue(AttackPhase.DISCOVERY, "recon", {"port_range": opts.get("port_range","1-1024"), "use_nmap": opts.get("use_nmap",True)})
-    orch.enqueue(AttackPhase.CVE_CHECK, "cve", {"use_api": opts.get("use_nvd_api",False), "max_results":20})
-    orch.enqueue(AttackPhase.AUTH_ATTACK, "auth", {"max_attempts": opts.get("max_attempts",100), "protocols":["ssh","ftp","http","mysql","postgresql","redis"]})
-    orch.enqueue(AttackPhase.EXPLOIT, "exploit", {"safe_mode": opts.get("safe_mode",True), "max_exploits":15})
-    orch.enqueue(AttackPhase.TRAFFIC, "traffic", {"probe_endpoints":True, "check_ssl":True})
-    orch.enqueue(AttackPhase.REPORT, "report", {"output_dir":"reports", "formats":["json","markdown","txt"]})
-    return orch
-
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="RedCyberToolkit - Automated Red Teaming Tool",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py --target example.com --ip 192.168.1.10
+  python main.py --target 192.168.1.10 --ip 192.168.1.10 --ai --output report.md --yes
+  python main.py --target 192.168.1.10 --yes   (--ip is automatically set to the same value)
+        """
+    )
+    parser.add_argument(
+        "--target",
+        required=True,
+        help="Target hostname or description (e.g., example.com)"
+    )
+    parser.add_argument(
+        "--ip",
+        help="Target IP address (if not provided, the --target value is used)"
+    )
+    parser.add_argument(
+        "--ai",
+        action="store_true",
+        help="Use AI Orchestrator (enables AI analysis with rate limiting)"
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        help="Save report to file (if not specified, report is printed to stdout)"
+    )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Set logging level (default: INFO)"
+    )
+    parser.add_argument(
+        "--yes", "-y",
+        action="store_true",
+        help="Skip confirmation prompt (non‑interactive mode)"
+    )
+    return parser.parse_args()
 
 def main():
-    print(BANNER)
-    parser = argparse.ArgumentParser(description="RedTeam Toolkit with AI injection (DeepSeek)")
-    parser.add_argument("--target", required=True, help="Target IP or hostname")
-    parser.add_argument("--phases", default="all", help="all or a comma-separated list: discovery,cve,auth,exploit,traffic,report")
-    parser.add_argument("--port-range", default="1-1024")
-    parser.add_argument("--no-nmap", action="store_true")
-    parser.add_argument("--safe-mode", action="store_true", default=True)
-    parser.add_argument("--use-nvd-api", action="store_true")
-    parser.add_argument("--max-attempts", type=int, default=100)
-    parser.add_argument("--yes", action="store_true", help="Skip authorization prompt")
-    args = parser.parse_args()
+    args = parse_arguments()
 
+    # If --ip was not given, use --target as the IP address
+    target_ip = args.ip if args.ip else args.target
 
-    if not args.yes and not ask_authorization(args.target):
-        print("\n[ABORT] Authorization not confirmed.")
-        sys.exit(1)
+    # Setup logging with the specified level
+    numeric_level = getattr(logging, args.log_level.upper(), logging.INFO)
+    setup_logging(level=numeric_level)
 
+    logger.info(f"RedCyberToolkit starting")
+    logger.info(f"Target: {args.target} ({target_ip})")
+    logger.info(f"AI mode: {'enabled' if args.ai else 'disabled'}")
+    logger.info(f"Non‑interactive (--yes): {args.yes}")
 
-    if args.phases == "all":
-        phases = list(AttackPhase)
-    else:
-        phases = [PHASE_MAP[p.strip()] for p in args.phases.split(",") if p.strip() in PHASE_MAP]
+    # Confirmation prompt (unless --yes is given)
+    if not args.yes:
+        print(f"\n⚠️  You are about to test {args.target} ({target_ip})")
+        response = input("Do you want to continue? (y/N): ").strip().lower()
+        if response not in ('y', 'yes'):
+            print("Aborted by user.")
+            return 0
 
+    # Initialize the appropriate orchestrator
+    try:
+        if args.ai:
+            logger.info("Using AI Orchestrator (with 7s rate limiting between API calls)")
+            orchestrator = AIOrchestrator(target=args.target, ip=target_ip)
+        else:
+            logger.info("Using standard Orchestrator")
+            orchestrator = Orchestrator(target=args.target, ip=target_ip)
 
-    opts = {
-        "port_range": args.port_range,
-        "use_nmap": not args.no_nmap,
-        "safe_mode": args.safe_mode,
-        "use_nvd_api": args.use_nvd_api,
-        "max_attempts": args.max_attempts,
-    }
+        # Run the test
+        final_state = orchestrator.run()
 
+        # Generate report
+        report_gen = ReportGenerator(final_state)
+        report_content = report_gen.generate()
 
-    orch = build_ai_orchestrator(args.target, authorized=True, opts=opts)
-    state = orch.run_pipeline(phases)
+        # Output report
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.write(report_content)
+            logger.info(f"Report saved to {args.output}")
+        else:
+            print("\n" + "="*80)
+            print("FINAL REPORT")
+            print("="*80)
+            print(report_content)
 
+        logger.info("RedCyberToolkit finished successfully")
+        return 0
 
-    print("\n" + "="*60)
-    print("SESSION SUMMARY (with AI)")
-    print("="*60)
-    for k, v in orch.summary().items():
-        print(f"  {k:<25}: {v}")
-    print("="*60)
-
+    except KeyboardInterrupt:
+        logger.warning("Interrupted by user")
+        return 130
+    except Exception as e:
+        logger.error(f"Fatal error: {e}", exc_info=True)
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

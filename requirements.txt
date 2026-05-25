@@ -4,3 +4,4 @@ mysql-connector-python>=8.0.33
 psycopg2-binary>=2.9.9
 openai>=1.0.0
 python-dotenv>=1.0.0
+requests>=2.34.2

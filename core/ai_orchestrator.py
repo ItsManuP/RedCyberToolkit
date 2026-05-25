@@ -1,105 +1,52 @@
+# core/ai_orchestrator.py
 import time
-from core.orchestrator import Orchestrator, TaskStatus
+from core.orchestrator import Orchestrator, AttackPhase
 from core.ai_assistant import AIAssistant
+from core.log_config import get_logger
 
+logger = get_logger("ai_orchestrator")
 
 class AIOrchestrator(Orchestrator):
-    """Orchestrator that injects AI comments before/after each task and phase"""
-
-
-    def __init__(self, target: str, authorized: bool, options: dict = None):
-        super().__init__(target, authorized, options)
+    def __init__(self, target: str, ip: str):
+        super().__init__(target, ip)
         self.ai = AIAssistant()
-        self._log_event("🧠 Integrated AI assistant (DeepSeek)")
+        logger.info("AI Orchestrator initialized (7s rate limiting)")
 
+    def _run_task(self, task):
+        agent = task["agent"]
+        name = task["name"]
+        phase = task["phase"]
 
-    def run_pipeline(self, phases=None):
-        if not self.state.authorized:
-            raise PermissionError("Authorization not confirmed")
-
-
-        selected = phases or self.PHASE_ORDER
-        self._log_event(f"=== SESSION {self.state.session_id} STARTED ===")
-        self._log_event(f"Target: {self.state.target}")
-
-
-        for phase in selected:
-            phase_tasks = [t for t in self.task_queue if t.phase == phase]
-            if not phase_tasks:
-                continue
-
-
-            # AI advice before the phase
-            advice = self.ai.analyze_orchestrator_decision(self.state, phase.name)
-            self._log_event(f"🤖 AI suggests for phase {phase.name}: {advice[:200]}...")
-
-
-            self._log_event(f"\n{'='*50}\nPHASE: {phase.name}\n{'='*50}")
-            for task in phase_tasks:
-                self._run_task_with_ai(task)
-                if task.status == TaskStatus.FAILED and phase.name == "DISCOVERY":
-                    self._log_event("DISCOVERY failed — pipeline interrupted.")
-                    return self.state
-            self.state.phases_completed.append(phase)
-
-
-        self._log_event(f"\n=== PIPELINE COMPLETED in {round(time.time()-self.state.started_at,2)}s ===")
-        return self.state
-
-
-    def _run_task_with_ai(self, task):
-        agent = self._agents.get(task.agent_name)
-        if agent is None:
-            task.status = TaskStatus.FAILED
-            task.error = f"Agent '{task.agent_name}' not found"
-            return task
-
-
-        # AI analysis before the task
+        # Pre-task AI analysis
+        logger.info(f"Requesting pre-analysis for {name}")
         pre_analysis = self.ai.analyze_before_task(
-            task.agent_name, task.phase.name, self.state, task.params
+            agent_name=name,
+            phase=phase.name,
+            state=self.state,
+            params=task.get("params", {})
         )
-        self._log_event(f"🤖 [PRE] {task.agent_name}: {pre_analysis[:150]}...")
+        logger.info(f"Pre-analysis: {pre_analysis[:150]}...")
 
-
-        # Original execution
-        task.status = TaskStatus.RUNNING
-        task.started_at = time.time()
-        self._log_event(f"[{task.phase.name}] Starting {task.agent_name} (id:{task.id})")
-        self.bus.publish("task.started", {"task_id": task.id, "agent": task.agent_name})
-
-
+        # Task execution
+        logger.info(f"Executing task: {name}")
+        start = time.time()
         try:
-            result = agent.run(self.state, task.params)
-            task.result = result
-            task.status = TaskStatus.DONE
-            self._ingest_result(task.phase, result)
-            if task.result:
-                if task.phase == AttackPhase.DISCOVERY:
-                    self._log_event(f"✅ {task.agent_name}: Scoperti {len(task.result.get('ports', []))} porte aperte")
-                elif task.phase == AttackPhase.CVE_CHECK:
-                    self._log_event(f"✅ {task.agent_name}: Trovate {len(task.result.get('cves', []))} CVE")
-                elif task.phase == AttackPhase.AUTH_ATTACK:
-                    self._log_event(f"✅ {task.agent_name}: Ottenute {len(task.result.get('credentials', []))} credenziali")
-        except Exception as exc:
-            task.status = TaskStatus.FAILED
-            task.error = str(exc)
-            self._log_event(f"  ERROR in {task.agent_name}: {exc}")
+            result = agent.run(self.state)
+            elapsed = time.time() - start
+            logger.info(f"Task {name} completed in {elapsed:.2f}s")
+            self._ingest_result(phase, result)
+            self._log_task_result(phase, name, result)
+        except Exception as e:
+            logger.error(f"Error in {name}: {e}", exc_info=True)
+            result = {"error": str(e)}
 
-
-        task.finished_at = time.time()
-        self._log_event(f"  → {task.status.value} in {task.duration()}s")
-
-
-        # AI analysis after the task (if successful or in any case)
-        if task.result:
-            post_analysis = self.ai.analyze_after_task(
-                task.agent_name, task.phase.name, self.state, task.result
-            )
-            self._log_event(f"🤖 [POST] {task.agent_name}: {post_analysis[:150]}...")
-        else:
-            self._log_event(f"🤖 [POST] {task.agent_name}: No result to analyze.")
-
-
-        self.bus.publish("task.finished", {"task_id": task.id, "status": task.status.value})
-        return task
+        # Post-task AI analysis
+        logger.info(f"Requesting post-analysis for {name}")
+        post_analysis = self.ai.analyze_after_task(
+            agent_name=name,
+            phase=phase.name,
+            state=self.state,
+            result=result if result else {}
+        )
+        logger.info(f"Post-analysis: {post_analysis[:150]}...")
+        return result
