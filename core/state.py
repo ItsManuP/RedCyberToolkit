@@ -1,14 +1,21 @@
-# core/state.py
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
 
+
+@dataclass
 class State:
-    """Central state container for the red teaming orchestration."""
-    
-    def __init__(self, target: str, ip: str):
-        self.target = target          # Target hostname/description
-        self.ip = ip                  # Target IP address
-        self.open_ports = []          # List of dicts: {'port': int, 'protocol': str, 'service': str}
-        self.services = {}            # Dict service_name -> version info
-        self.cve_list = []            # List of dicts: {'cve_id': str, 'description': str, ...}
-        self.credentials = []         # List of dicts: {'username': str, 'password': str, 'service': str}
-        self.exploits = []            # List of dicts: {'exploit_name': str, 'success': bool, ...}
-        self.errors = []              # List of error dicts from tasks
+    """Central state container for the orchestration pipeline."""
+
+    target: str
+    ip: str
+    open_ports: List[Dict[str, Any]] = field(default_factory=list)
+    filtered_ports: List[Dict[str, Any]] = field(default_factory=list)
+    closed_ports: List[Dict[str, Any]] = field(default_factory=list)
+    services: Dict[int, str] = field(default_factory=dict)
+    cve_list: List[Dict[str, Any]] = field(default_factory=list)
+    credentials: List[Dict[str, Any]] = field(default_factory=list)
+    exploits: List[Dict[str, Any]] = field(default_factory=list)
+    web_findings: List[Dict[str, Any]] = field(default_factory=list)
+    wordpress_plugins: List[Dict[str, Any]] = field(default_factory=list)
+    reports: List[Dict[str, Any]] = field(default_factory=list)
+    errors: List[Dict[str, Any]] = field(default_factory=list)
