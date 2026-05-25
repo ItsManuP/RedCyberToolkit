@@ -23,8 +23,8 @@ from utils.consent import ask_authorization
 BANNER = """
 ╔══════════════════════════════════════════════════════╗
     RedCyber ToolKIT — AI-Augmented Multi-Agent v1.0   
-║   FOR AUTHORIZED PENETRATION TESTING ONLY            ║
-                    🤖 DeepSeek                      
+║   FOR AUTHORIZED PENETRATION TESTING ONLY            ║                                       
+
 ╚══════════════════════════════════════════════════════╝
 """
 
